@@ -26,6 +26,10 @@ class App extends Component {
     this.setState({ allUnits: units });
   };
 
+  addUnit = unit => {
+    this.setState({ build: [...this.state.build, unit] }, () => console.log(this.state));
+  };
+
   render() {
     return (
       <React.Fragment>
@@ -40,7 +44,7 @@ class App extends Component {
             <div className="row" style={{ padding: "0em" }}>
               <div className="column" style={{ flex: 4 }}>
                 <div className="ui segment" style={{ border: "0px solid red", boxShadow: "none", margin: "0.5em" }}>
-                  <Route exact path="/menu/:listType" render={rProps => <UnitList units={this.state.allUnits} {...rProps} />} />
+                  <Route exact path="/menu/:listType" render={rProps => <UnitList handleAddUnit={this.addUnit} units={this.state.allUnits} {...rProps} />} />
                   <Route exact path="/builds" render={() => <BuildMenu />} />
                 </div>
               </div>
