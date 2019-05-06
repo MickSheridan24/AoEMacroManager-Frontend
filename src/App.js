@@ -11,7 +11,7 @@ class App extends Component {
     this.state = {
       allUnits: [],
       buildCounter: 0,
-      builds: [{ name: "", description: "", units: [] }],
+      builds: [{ id: 0, name: "", description: "", units: [] }],
       currentBuild: 0,
     };
   }
@@ -20,10 +20,10 @@ class App extends Component {
   }
 
   getCurrentBuild() {
-    return this.state.builds[this.state.currentBuild];
+    return this.state.builds.find(b => b.id === this.state.currentBuild);
   }
   setCurrentBuild(id) {
-    this.setState({ currentBuild: this.state.builds.indexOf(this.state.builds.find(b => b.id === id)) });
+    this.setState({ currentBuild: id });
   }
 
   setImage = unit => {
@@ -40,7 +40,7 @@ class App extends Component {
     unit.image = ret;
   };
   initialRequests = async () => {
-    console.trace("initialRequests() called");
+    console.log("initialRequests() called");
     await this.fetchUnits();
     await this.fetchBuilds();
   };
@@ -48,16 +48,17 @@ class App extends Component {
     // console.trace("fetchUnits() called");
     const resp = await fetch("http://localhost:3000/units");
     const units = await resp.json();
-    units.forEach(unit => {
-      this.setImage(unit);
-    });
+
+    // units.forEach(unit => {
+    //   this.setImage(unit);
+    // });
     this.setState({ allUnits: units });
   };
   fetchBuilds = async () => {
     // console.trace("fetchBuilds() called");
     const resp = await fetch("http://localhost:3000/builds");
     const builds = await resp.json();
-    this.setState({ builds: builds });
+    this.setState({ builds: builds, currentBuild: builds[0].id });
   };
   fetchBuild = async id => {
     // console.trace("fetchBuild() called");
@@ -69,15 +70,16 @@ class App extends Component {
     this.setState({ builds: [...builds] });
   };
 
+  //TODO response should replace second fetch call
   reorderBuild = async (unit, unitIndex, targetIndex) => {
     // console.trace("reorderBuild() called");
-    const req = await fetch(`http://localhost:3000/builds/rearrange/${this.getCurrentBuild().id}`, {
+    const req = await fetch(`http://localhost:3000/builds/rearrange/${this.state.currentBuild}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ unitIndex: unitIndex, targetIndex: targetIndex }),
     });
     await req.json();
-    this.fetchBuild(this.getCurrentBuild().id);
+    this.fetchBuild(this.state.currentBuild);
   };
 
   newBuild = async (name, description) => {
@@ -89,30 +91,30 @@ class App extends Component {
     const resp = await req.json();
     if (resp) {
       await this.fetchBuilds();
-      this.setCurrentBuild(resp.id);
+      this.setCurrentBuild(parseInt(resp.id));
     }
   };
 
+  //TODO, response should replace second fetch call
   addUnit = async u => {
     // console.trace("addUnit() called");
     let unit = { ...u };
     const unitId = unit.id;
-    const buildId = this.getCurrentBuild().id;
 
     const req = await fetch("http://localhost:3000/build_units", {
       method: "POST",
       headers: { "Content-Type": "Application/json" },
-      body: JSON.stringify({ unit_id: unitId, build_id: buildId }),
+      body: JSON.stringify({ unit_id: unitId, build_id: this.state.currentBuild }),
     });
     await req.json();
-    this.fetchBuild(buildId);
+    this.fetchBuild(this.state.currentBuild);
   };
 
   handleSelectBuild = e => {
     e.preventDefault();
     const build = this.state.builds.find(b => b.id === parseInt(e.target.value));
 
-    this.setState({ currentBuild: this.state.builds.indexOf(build) });
+    this.setState({ currentBuild: build.id });
   };
 
   render() {
