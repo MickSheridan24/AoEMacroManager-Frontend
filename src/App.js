@@ -48,10 +48,6 @@ class App extends Component {
     // console.trace("fetchUnits() called");
     const resp = await fetch("http://localhost:3000/units");
     const units = await resp.json();
-
-    // units.forEach(unit => {
-    //   this.setImage(unit);
-    // });
     this.setState({ allUnits: units });
   };
   fetchBuilds = async () => {
@@ -71,15 +67,17 @@ class App extends Component {
   };
 
   //TODO response should replace second fetch call
-  reorderBuild = async (unit, unitIndex, targetIndex) => {
-    // console.trace("reorderBuild() called");
+  reorderBuild = async (unitIndex, targetIndex) => {
     const req = await fetch(`http://localhost:3000/builds/rearrange/${this.state.currentBuild}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ unitIndex: unitIndex, targetIndex: targetIndex }),
     });
-    await req.json();
-    this.fetchBuild(this.state.currentBuild);
+    const build = await req.json();
+    const buildIndex = this.state.builds.indexOf(this.getCurrentBuild());
+    const builds = [...this.state.builds];
+    builds[buildIndex] = build;
+    this.setState({ builds: builds });
   };
 
   newBuild = async (name, description) => {
@@ -89,15 +87,10 @@ class App extends Component {
       body: JSON.stringify({ name: name, description: description }),
     });
     const resp = await req.json();
-    if (resp) {
-      await this.fetchBuilds();
-      this.setCurrentBuild(parseInt(resp.id));
-    }
+    this.setState({ builds: [...this.state.builds, resp], currentBuild: parseInt(resp.id) });
   };
 
-  //TODO, response should replace second fetch call
   addUnit = async u => {
-    // console.trace("addUnit() called");
     let unit = { ...u };
     const unitId = unit.id;
 
@@ -106,8 +99,39 @@ class App extends Component {
       headers: { "Content-Type": "Application/json" },
       body: JSON.stringify({ unit_id: unitId, build_id: this.state.currentBuild }),
     });
-    await req.json();
-    this.fetchBuild(this.state.currentBuild);
+    const newUnit = await req.json();
+    const buildIndex = this.state.builds.indexOf(this.getCurrentBuild());
+    const builds = [...this.state.builds];
+    builds[buildIndex].units.push(newUnit);
+    this.setState({ builds: builds });
+  };
+
+  setDescription = async (e, step) => {
+    const descr = e.target.elements.description.value;
+
+    const res = await fetch(`http://localhost:3000/build_units/${step.build_key}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...step, description: descr }),
+    });
+    const newStep = await res.json();
+    console.log(newStep);
+    const steps = this.getCurrentBuild().units;
+    const ind = steps.indexOf(step);
+    steps[ind] = newStep;
+    const build = { ...this.getCurrentBuild() };
+    build.units = steps;
+    const builds = [...this.state.builds];
+    builds[this.state.currentBuild] = build;
+    this.setState({ builds: builds });
+  };
+
+  deleteStep = async id => {
+    const req = await fetch(`http://localhost:3000/build_units/${id}`, {
+      method: "DELETE",
+    });
+    const resp = await req.json();
+    this.fetchBuild(resp.build_id);
   };
 
   handleSelectBuild = e => {
@@ -147,7 +171,10 @@ class App extends Component {
                 path="/builds"
                 render={() => (
                   <BuildMenu
+                    deleteStep={this.deleteStep}
+                    reorder={this.reorderBuild}
                     handleSelectBuild={this.handleSelectBuild}
+                    setDescription={this.setDescription}
                     newBuild={this.newBuild}
                     current={this.state.currentBuild}
                     builds={this.state.builds}
