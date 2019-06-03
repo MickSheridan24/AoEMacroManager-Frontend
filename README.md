@@ -7,7 +7,7 @@
 1. **Create a new build order**
 
 2. **Add units, buildings, and techs to your order**
-  
-  Adding units will reveal unlocked units.
+    
+    Adding units will reveal unlocked units.
 
 3. **Edit your build order by moving or removing units**
